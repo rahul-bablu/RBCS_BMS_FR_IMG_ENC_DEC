@@ -3,3 +3,9 @@ Include/
 Lib/
 Scripts/
 pyvenv.cfg
+images/
+
+*.jpeg
+*.jpg
+*.png
+share/*

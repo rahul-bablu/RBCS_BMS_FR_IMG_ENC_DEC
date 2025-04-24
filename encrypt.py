@@ -156,10 +156,11 @@ enc_matrix = [['L', 'R', 'U', 'D'],
               ["D'", "F'", 'L2', 'R2'],
               ['U2', 'D2', 'F2', "L"]]
 
+import matplotlib.pyplot as plt
 
-img = cv.imread('lion.jpg')
-tmp = np.copy(img)
-# img = cv.imread('eye.jpeg')
+img_name = input("Image Path: ")
+img = cv.imread(img_name)
+original_img = np.copy(img)
 rows, cols, _ = img.shape
 k1="01010100011010000110000101110100011100110010000001101101011110010010000001001011011101010110111001100111001000000100011001110101"
 k2="11100010001100101111110011110001100100010001001010010001100010001011000101011001111001001110011011010110011110011010001010010011"
@@ -172,18 +173,72 @@ for block_size in blocks:
             img[i:i+block_size, j:j+block_size] = scramble_img(enc_matrix, seq, img[i:i+block_size, j:j+block_size], block_size)
     
 img = bitplane_shuffling(img, k1, k2)
-encrypted_img = cv.imwrite('encrypted_lion.jpg', img)
-# encrypted_img = cv.imwrite('encrypted_eye.jpeg', img)
+encrypted_img = cv.imwrite(f"encrypted_{img_name.split('.')[0]}.png", img)
+print(encrypted_img)
+
 
 if encrypted_img:
     print("Encrypted")
 else:
     print("Failed to Encrypt")
-dimg = decrypt(img)
-print((dimg==tmp).all())
-decrypted_img = cv.imwrite('decrypted_lion.jpg', dimg)
-# decrypted_img = cv.imwrite('decrypted_eye.jpeg', decrypt(img))
-if decrypted_img:
+    exit(0)
+    
+encrypted_img = cv.imread(f"encrypted_{img_name.split('.')[0]}.png")
+decrypted_img = decrypt(encrypted_img)
+print((decrypted_img==original_img).all())
+decrypted_imgw = cv.imwrite(f"decrypted_{img_name.split('.')[0]}.png", decrypted_img)
+if decrypted_imgw:
     print("Decrypted")
 else: 
     print("Failed to Decrypt")
+    exit(0)
+
+# plt.figure(figsize=(10, 10))
+diff_img = cv.imwrite(f"{img_name.split('.')[0]}_diff_img.png", cv.absdiff(original_img, decrypted_img))
+
+
+plt.figure(figsize=(20, 10))
+
+for idx, imgname in enumerate(((f"{img_name}", 'Original'), \
+    (f"encrypted_{img_name.split('.')[0]}.png", 'Encrypted'), \
+        (f"decrypted_{img_name.split('.')[0]}.png", 'Decrypted'), \
+            (f"{img_name.split('.')[0]}_diff_img.png", 'Difference (Original - Decrypted)'))):
+    imgread = cv.imread(imgname[0])
+    plt.subplot(2, 2, idx + 1)
+    plt.imshow(cv.cvtColor(imgread, cv.COLOR_BGR2RGB))
+    plt.title(imgname[1])
+    plt.axis("off")
+
+
+
+plt.figure(figsize=(12, 9))
+
+for i, col in enumerate(('b', 'g', 'r')):
+    hist_original = cv.calcHist([original_img], [i], None, [256], [0, 256])
+    hist_encrypted = cv.calcHist([encrypted_img], [i], None, [256], [0, 256])
+    hist_decrypted = cv.calcHist([decrypted_img], [i], None, [256], [0, 256])
+
+    plt.subplot(3, 3, i * 3 + 1)
+    plt.plot(hist_original, color=col, linestyle='-')
+    plt.title(f"{col.upper()} Channel - Original")
+    plt.xlabel("Pixel Intensity (0-255)")
+    plt.ylabel("Frequency")
+    plt.legend(["Original"])
+
+    plt.subplot(3, 3, i * 3 + 2)
+    plt.plot(hist_encrypted, color=col, linestyle='-')
+    plt.title(f"{col.upper()} Channel - Encrypted")
+    plt.xlabel("Pixel Intensity (0-255)")
+    plt.ylabel("Frequency")
+    plt.legend(["Encrypted"])
+
+    plt.subplot(3, 3, i * 3 + 3)
+    plt.plot(hist_decrypted, color=col, linestyle='-')
+    plt.title(f"{col.upper()} Channel - Decrypted")
+    plt.xlabel("Pixel Intensity (0-255)")
+    plt.ylabel("Frequency")
+    plt.legend(["Decrypted"])
+
+
+plt.tight_layout()
+plt.show()
